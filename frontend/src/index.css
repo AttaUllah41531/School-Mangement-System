@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+@layer base {
+    :root {
+        --brand-900: #3D52A0;
+        --brand-700: #7091E6;
+        --brand-500: #8697C4;
+        --brand-300: #ADBBDA;
+        --brand-100: #EDE8F5;
+    }
+}
