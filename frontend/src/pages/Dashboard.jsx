@@ -83,18 +83,29 @@ const Dashboard = () => {
         );
     }
 
-    const cards = [
+    const isStudent = stats?.role === 'student';
+
+    const cards = isStudent ? [
+        { title: 'Pending Dues', value: `PKR ${Number(stats?.pendingFees || 0).toLocaleString()}`, icon: DollarSign, bgColor: '#fef2f2', iconColor: '#dc2626', trendValue: 'Required', isUp: false },
+        { title: 'Attendance Rate', value: stats?.attendanceRate || '0%', icon: Calendar, bgColor: '#f0fdf4', iconColor: '#16a34a', trendValue: 'Stable', isUp: true },
+        { title: 'Upcoming Exams', value: stats?.upcomingExams || 0, icon: Activity, bgColor: '#eff6ff', iconColor: '#2563eb', trendValue: 'Next Month', isUp: true },
+        { title: 'Library Books', value: stats?.libraryBooks || 0, icon: Users, bgColor: '#f5f3ff', iconColor: '#7c3aed', trendValue: 'Active', isUp: true },
+    ] : [
         { title: 'Total Students', value: stats?.totalStudents || 0, icon: Users, bgColor: '#EDE8F5', iconColor: '#3D52A0', trendValue: '+12%', isUp: true },
         { title: 'Total Teachers', value: stats?.totalTeachers || 0, icon: UserCheck, bgColor: '#EDE8F5', iconColor: '#7091E6', trendValue: '+4%', isUp: true },
         { title: 'Attendance Rate', value: stats?.dailyAttendance || '0%', icon: Calendar, bgColor: '#EDE8F5', iconColor: '#8697C4', trendValue: '-2%', isUp: false },
-        { title: 'Total Revenue', value: stats?.totalRevenue || '$0', icon: DollarSign, bgColor: '#EDE8F5', iconColor: '#3D52A0', trendValue: '+18%', isUp: true },
+        { title: 'Total Revenue', value: stats?.totalRevenue ? `PKR ${stats.totalRevenue.toLocaleString()}` : 'PKR 0', icon: DollarSign, bgColor: '#EDE8F5', iconColor: '#3D52A0', trendValue: '+18%', isUp: true },
     ];
 
     return (
         <Layout>
             <div className="mb-6 sm:mb-10">
-                <h1 className="text-2xl sm:text-3xl font-extrabold mb-1" style={{ color: '#3D52A0' }}>School Dashboard</h1>
-                <p className="text-sm" style={{ color: '#8697C4' }}>Welcome back! Here's what's happening today.</p>
+                <h1 className="text-2xl sm:text-3xl font-extrabold mb-1" style={{ color: '#3D52A0' }}>
+                    {isStudent ? 'My Dashboard' : 'School Dashboard'}
+                </h1>
+                <p className="text-sm" style={{ color: '#8697C4' }}>
+                    {isStudent ? 'Track your performance and dues.' : "Welcome back! Here's what's happening today."}
+                </p>
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-10">
@@ -104,24 +115,30 @@ const Dashboard = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* ── Enrollment Trends ── */}
+                {/* ── Enrollment/Performance Trends ── */}
                 <div className="bg-white p-5 sm:p-8 rounded-2xl shadow-sm border border-gray-100">
                     <div className="flex flex-wrap justify-between items-start gap-3 mb-6">
                         <div>
-                            <h3 className="text-lg sm:text-xl font-bold" style={{ color: '#3D52A0' }}>Enrollment Trends</h3>
-                            <p className="text-sm" style={{ color: '#8697C4' }}>Monthly student admissions</p>
+                            <h3 className="text-lg sm:text-xl font-bold" style={{ color: '#3D52A0' }}>
+                                {isStudent ? 'My Performance' : 'Enrollment Trends'}
+                            </h3>
+                            <p className="text-sm" style={{ color: '#8697C4' }}>
+                                {isStudent ? 'Monthly progress' : 'Monthly student admissions'}
+                            </p>
                         </div>
-                        <select
-                            style={{ backgroundColor: '#EDE8F5', color: '#3D52A0' }}
-                            className="border-none rounded-lg px-3 py-2 text-sm font-medium outline-none shrink-0"
-                        >
-                            <option>Last 6 Months</option>
-                            <option>Last Year</option>
-                        </select>
+                        {isStudent ? null : (
+                            <select
+                                style={{ backgroundColor: '#EDE8F5', color: '#3D52A0' }}
+                                className="border-none rounded-lg px-3 py-2 text-sm font-medium outline-none shrink-0"
+                            >
+                                <option>Last 6 Months</option>
+                                <option>Last Year</option>
+                            </select>
+                        )}
                     </div>
                     <div className="h-[220px] sm:h-[280px] lg:h-[320px]">
                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={stats?.enrollmentTrends || []} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                            <AreaChart data={isStudent ? stats?.performanceTrends || [] : stats?.enrollmentTrends || []} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                                 <defs>
                                     <linearGradient id="colorStudents" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%"  stopColor="#7091E6" stopOpacity={0.2}/>
@@ -134,7 +151,7 @@ const Dashboard = () => {
                                 <Tooltip
                                     contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #EDE8F5', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: 13 }}
                                 />
-                                <Area type="monotone" dataKey="students" stroke="#7091E6" strokeWidth={3} fillOpacity={1} fill="url(#colorStudents)" />
+                                <Area type="monotone" dataKey={isStudent ? "value" : "students"} stroke="#7091E6" strokeWidth={3} fillOpacity={1} fill="url(#colorStudents)" />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
@@ -145,13 +162,15 @@ const Dashboard = () => {
                     <div className="flex flex-wrap justify-between items-start gap-3 mb-6">
                         <div>
                             <h3 className="text-lg sm:text-xl font-bold" style={{ color: '#3D52A0' }}>Attendance Analysis</h3>
-                            <p className="text-sm" style={{ color: '#8697C4' }}>Average attendance by month</p>
+                            <p className="text-sm" style={{ color: '#8697C4' }}>
+                                {isStudent ? 'Weekly attendance' : 'Average attendance by month'}
+                            </p>
                         </div>
                         <Activity className="w-5 h-5 mt-1 shrink-0" style={{ color: '#ADBBDA' }} />
                     </div>
                     <div className="h-[220px] sm:h-[280px] lg:h-[320px]">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={stats?.attendanceRate || []} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                            <BarChart data={stats?.attendanceTrend || []} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EDE8F5" />
                                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#ADBBDA', fontSize: 11}} dy={10} />
                                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#ADBBDA', fontSize: 11}} width={35} />
@@ -160,8 +179,8 @@ const Dashboard = () => {
                                     contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #EDE8F5', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: 13 }}
                                 />
                                 <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={40}>
-                                    {stats?.attendanceRate?.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={index === stats.attendanceRate.length - 1 ? '#3D52A0' : '#ADBBDA'} />
+                                    {stats?.attendanceTrend?.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.value === 100 ? '#3D52A0' : '#ADBBDA'} />
                                     ))}
                                 </Bar>
                             </BarChart>

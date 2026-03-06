@@ -12,6 +12,7 @@ import {
     LogOut,
     ChevronRight,
     GraduationCap,
+    DollarSign,
     X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContextState';
@@ -27,6 +28,7 @@ const Sidebar = ({ open, onClose }) => {
         { name: 'Attendance',icon: Calendar,         path: '/attendance'},
         { name: 'Exams',     icon: ClipboardList,    path: '/exams'     },
         { name: 'Library',   icon: BookMarked,       path: '/library'   },
+        { name: 'Fees',      icon: DollarSign,       path: '/fees'      },
         { name: 'Settings',  icon: Settings,         path: '/settings'  },
     ];
 

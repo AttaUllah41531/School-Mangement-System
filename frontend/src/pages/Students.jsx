@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Layout from '../components/layout/Layout';
 import api from '../services/api';
 import StudentForm from '../components/forms/StudentForm';
+import { useAuth } from '../context/AuthContextState';
 import {
     Plus,
     Search,
@@ -22,15 +23,17 @@ import {
     UserX,
     GraduationCap,
     ChevronRight,
+    CheckCircle,
+    AlertCircle,
 } from 'lucide-react';
 
 // ─── Palette ─────────────────────────────────────────────────────────────────
 const P = {
-    primary:   '#3D52A0',
+    primary: '#3D52A0',
     secondary: '#7091E6',
-    light:     '#ADBBDA',
-    soft:      '#EDE8F5',
-    muted:     '#8697C4',
+    light: '#ADBBDA',
+    soft: '#EDE8F5',
+    muted: '#8697C4',
 };
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
@@ -54,7 +57,7 @@ const StatusBadge = ({ status }) => {
             className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold`}
             style={{
                 backgroundColor: active ? '#dcfce7' : '#fee2e2',
-                color:           active ? '#16a34a' : '#dc2626',
+                color: active ? '#16a34a' : '#dc2626',
             }}
         >
             <span
@@ -79,22 +82,30 @@ const StatCard = ({ icon: Icon, label, value, color }) => (
     </div>
 );
 
-// ─── InfoRow (modal detail row) ────────────────────────────────────────────────
-// eslint-disable-next-line no-unused-vars
-const InfoRow = ({ Icon, label, value }) => (
-    <div
-        className="flex items-center gap-3 py-3"
-        style={{ borderBottom: `1px solid ${P.soft}` }}
-    >
-        <div className="p-2 rounded-lg shrink-0" style={{ backgroundColor: P.soft }}>
-            <Icon className="w-4 h-4" style={{ color: P.secondary }} />
+// ─── Message Display ───────────────────────────────────────────────────────────
+const MessageDisplay = ({ message }) => {
+    if (!message.type) return null;
+
+    const isSuccess = message.type === 'success';
+    return (
+        <div className="fixed top-4 right-4 z-50 p-4 rounded-xl shadow-lg flex items-center gap-3 max-w-sm animate-pulse">
+            {isSuccess ? (
+                <CheckCircle className="w-5 h-5 shrink-0" style={{ color: '#16a34a' }} />
+            ) : (
+                <AlertCircle className="w-5 h-5 shrink-0" style={{ color: '#dc2626' }} />
+            )}
+            <p className="text-sm font-medium" style={{
+                color: isSuccess ? '#16a34a' : '#dc2626',
+                backgroundColor: isSuccess ? '#dcfce7' : '#fef2f2',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: `1px solid ${isSuccess ? '#bbf7d0' : '#fecaca'}`
+            }}>
+                {message.text}
+            </p>
         </div>
-        <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: P.muted }}>{label}</p>
-            <p className="font-semibold mt-0.5 truncate" style={{ color: P.primary }}>{value || '—'}</p>
-        </div>
-    </div>
-);
+    );
+};
 
 // ─── Password Row ─────────────────────────────────────────────────────────────
 const PasswordInfoRow = ({ value }) => {
@@ -166,13 +177,79 @@ const StudentViewModal = ({ student, onClose }) => {
 
                 {/* Scrollable body */}
                 <div className="flex-1 overflow-y-auto p-5">
-                    <InfoRow Icon={Hash}       label="Admission No"    value={student.admission_no} />
-                    <InfoRow Icon={BookOpen}   label="Class / Section"  value={`${student.class_name || 'N/A'} — ${student.section_name || 'N/A'}`} />
-                    <InfoRow Icon={UserCheck}  label="Gender"           value={student.gender} />
-                    <InfoRow Icon={Calendar}   label="Date of Birth"    value={student.dob ? new Date(student.dob).toLocaleDateString() : null} />
-                    <InfoRow Icon={Mail}       label="Email"            value={student.email} />
+                    <div className="flex items-center gap-3 py-3" style={{ borderBottom: `1px solid ${P.soft}` }}>
+                        <div className="p-2 rounded-lg shrink-0" style={{ backgroundColor: P.soft }}>
+                            <Hash className="w-4 h-4" style={{ color: P.secondary }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: P.muted }}>Admission No</p>
+                            <p className="font-semibold mt-0.5 truncate" style={{ color: P.primary }}>{student.admission_no || '—'}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 py-3" style={{ borderBottom: `1px solid ${P.soft}` }}>
+                        <div className="p-2 rounded-lg shrink-0" style={{ backgroundColor: P.soft }}>
+                            <BookOpen className="w-4 h-4" style={{ color: P.secondary }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: P.muted }}>Class / Section</p>
+                            <p className="font-semibold mt-0.5 truncate" style={{ color: P.primary }}>{student.class_name || 'N/A'} — {student.section_name || 'N/A'}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 py-3" style={{ borderBottom: `1px solid ${P.soft}` }}>
+                        <div className="p-2 rounded-lg shrink-0" style={{ backgroundColor: P.soft }}>
+                            <UserCheck className="w-4 h-4" style={{ color: P.secondary }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: P.muted }}>Gender</p>
+                            <p className="font-semibold mt-0.5 truncate" style={{ color: P.primary }}>{student.gender || '—'}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 py-3" style={{ borderBottom: `1px solid ${P.soft}` }}>
+                        <div className="p-2 rounded-lg shrink-0" style={{ backgroundColor: P.soft }}>
+                            <Calendar className="w-4 h-4" style={{ color: P.secondary }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: P.muted }}>Date of Birth</p>
+                            <p className="font-semibold mt-0.5 truncate" style={{ color: P.primary }}>{student.dob ? new Date(student.dob).toLocaleDateString() : '—'}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 py-3" style={{ borderBottom: `1px solid ${P.soft}` }}>
+                        <div className="p-2 rounded-lg shrink-0" style={{ backgroundColor: P.soft }}>
+                            <Mail className="w-4 h-4" style={{ color: P.secondary }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: P.muted }}>Email / Phone</p>
+                            <p className="font-semibold mt-0.5 truncate" style={{ color: P.primary }}>
+                                {student.email || '—'} 
+                                {student.phone && <span className="text-gray-400 font-normal ml-2">({student.phone})</span>}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3 py-3" style={{ borderBottom: `1px solid ${P.soft}` }}>
+                        <div className="p-2 rounded-lg shrink-0" style={{ backgroundColor: P.soft }}>
+                            <Users className="w-4 h-4" style={{ color: P.secondary }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: P.muted }}>Parent / Guardian</p>
+                            <p className="font-semibold mt-0.5 truncate" style={{ color: P.primary }}>
+                                {student.parent_name || '—'}
+                                {student.parent_phone && <span className="text-gray-400 font-normal ml-2">({student.parent_phone})</span>}
+                            </p>
+                            {student.occupation && <p className="text-[10px] font-medium text-gray-400 uppercase mt-0.5">{student.occupation}</p>}
+                        </div>
+                    </div>
+
                     <PasswordInfoRow value={student.password} />
-                    <InfoRow Icon={MapPin}     label="Address"          value={student.address} />
+                    <div className="flex items-center gap-3 py-3" style={{ borderBottom: `1px solid ${P.soft}` }}>
+                        <div className="p-2 rounded-lg shrink-0" style={{ backgroundColor: P.soft }}>
+                            <MapPin className="w-4 h-4" style={{ color: P.secondary }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: P.muted }}>Address</p>
+                            <p className="font-semibold mt-0.5 truncate" style={{ color: P.primary }}>{student.address || '—'}</p>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Footer */}
@@ -191,7 +268,7 @@ const StudentViewModal = ({ student, onClose }) => {
 };
 
 // ─── Mobile Student Card ───────────────────────────────────────────────────────
-const StudentCard = ({ student, onView, onEdit, onDelete }) => (
+const StudentCard = ({ student, onView, onEdit, onDelete, isAdmin }) => (
     <div
         className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-3 transition-transform active:scale-[0.98]"
     >
@@ -223,20 +300,24 @@ const StudentCard = ({ student, onView, onEdit, onDelete }) => (
             >
                 <Eye className="w-4 h-4" /> View
             </button>
-            <button
-                onClick={() => onEdit(student)}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold transition-all"
-                style={{ backgroundColor: '#EEF2FF', color: P.primary }}
-            >
-                <Edit2 className="w-4 h-4" /> Edit
-            </button>
-            <button
-                onClick={() => onDelete(student.id)}
-                className="flex items-center justify-center p-2.5 rounded-xl text-sm font-semibold transition-all"
-                style={{ backgroundColor: '#fef2f2', color: '#dc2626' }}
-            >
-                <Trash2 className="w-4 h-4" />
-            </button>
+            {isAdmin && (
+                <>
+                    <button
+                        onClick={() => onEdit(student)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                        style={{ backgroundColor: '#EEF2FF', color: P.primary }}
+                    >
+                        <Edit2 className="w-4 h-4" /> Edit
+                    </button>
+                    <button
+                        onClick={() => onDelete(student.id)}
+                        className="flex items-center justify-center p-2.5 rounded-xl text-sm font-semibold transition-all"
+                        style={{ backgroundColor: '#fef2f2', color: '#dc2626' }}
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+                </>
+            )}
         </div>
     </div>
 );
@@ -261,7 +342,7 @@ const SkeletonCard = () => (
 );
 
 // ─── Empty State ──────────────────────────────────────────────────────────────
-const EmptyState = ({ query, onAdd }) => (
+const EmptyState = ({ query, onAdd, isAdmin }) => (
     <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
         <div className="w-20 h-20 rounded-2xl flex items-center justify-center mb-5" style={{ backgroundColor: P.soft }}>
             <GraduationCap className="w-10 h-10" style={{ color: P.light }} />
@@ -274,7 +355,7 @@ const EmptyState = ({ query, onAdd }) => (
                 ? `No students match "${query}". Try a different search term.`
                 : 'Get started by adding your first student admission.'}
         </p>
-        {!query && (
+        {!query && isAdmin && (
             <button
                 onClick={onAdd}
                 className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90"
@@ -288,12 +369,15 @@ const EmptyState = ({ query, onAdd }) => (
 
 // ─── Students Page ────────────────────────────────────────────────────────────
 const Students = () => {
-    const [students,         setStudents]         = useState([]);
-    const [loading,          setLoading]          = useState(true);
-    const [search,           setSearch]           = useState('');
-    const [isFormOpen,       setIsFormOpen]       = useState(false);
-    const [selectedStudent,  setSelectedStudent]  = useState(null);
-    const [viewStudent,      setViewStudent]      = useState(null);
+    const [students, setStudents] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState('');
+    const [isFormOpen, setIsFormOpen] = useState(false);
+    const [selectedStudent, setSelectedStudent] = useState(null);
+    const [viewStudent, setViewStudent] = useState(null);
+    const [message, setMessage] = useState({ type: '', text: '' });
+    const { user } = useAuth();
+    const isAdmin = user?.role === 'admin';
 
     const fetchStudents = async () => {
         setLoading(true);
@@ -313,12 +397,20 @@ const Students = () => {
         try {
             if (selectedStudent) {
                 await api.put(`/students/${selectedStudent.id}`, formData);
+                setMessage({ type: 'success', text: 'Student updated successfully!' });
             } else {
                 await api.post('/students', formData);
+                setMessage({ type: 'success', text: 'Student admitted successfully!' });
             }
             fetchStudents();
+            // Clear message after 3 seconds
+            setTimeout(() => setMessage({ type: '', text: '' }), 3000);
         } catch (err) {
             console.error('Action failed', err);
+            const errorMsg = err.response?.data?.message || err.message || 'Operation failed';
+            setMessage({ type: 'error', text: errorMsg });
+            // Clear error message after 5 seconds
+            setTimeout(() => setMessage({ type: '', text: '' }), 5000);
             throw err;
         }
     };
@@ -335,7 +427,7 @@ const Students = () => {
     };
 
     const handleEdit = (student) => { setSelectedStudent(student); setIsFormOpen(true); };
-    const handleAdd  = ()        => { setSelectedStudent(null); setIsFormOpen(true); };
+    const handleAdd = () => { setSelectedStudent(null); setIsFormOpen(true); };
     const handleView = (student) => setViewStudent(student);
 
     const filteredStudents = students.filter(s =>
@@ -343,11 +435,14 @@ const Students = () => {
         s.admission_no.toLowerCase().includes(search.toLowerCase())
     );
 
-    const activeCount   = students.filter(s => (s.status ?? 'active') === 'active').length;
+    const activeCount = students.filter(s => (s.status ?? 'active') === 'active').length;
     const inactiveCount = students.length - activeCount;
 
     return (
         <Layout>
+            {/* Message Display */}
+            <MessageDisplay message={message} />
+
             {/* ── Page Header ── */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                 <div>
@@ -358,21 +453,23 @@ const Students = () => {
                         Manage admissions, profiles and academic history.
                     </p>
                 </div>
-                <button
-                    onClick={handleAdd}
-                    className="flex items-center gap-2 text-white px-5 py-3 rounded-xl font-semibold transition-all hover:opacity-90 active:scale-[0.97] shrink-0 w-full sm:w-auto justify-center sm:justify-start"
-                    style={{ backgroundColor: P.primary, boxShadow: '0 8px 20px rgba(61,82,160,0.25)' }}
-                >
-                    <Plus className="w-5 h-5" />
-                    New Admission
-                </button>
+                {isAdmin && (
+                    <button
+                        onClick={handleAdd}
+                        className="flex items-center gap-2 text-white px-5 py-3 rounded-xl font-semibold transition-all hover:opacity-90 active:scale-[0.97] shrink-0 w-full sm:w-auto justify-center sm:justify-start"
+                        style={{ backgroundColor: P.primary, boxShadow: '0 8px 20px rgba(61,82,160,0.25)' }}
+                    >
+                        <Plus className="w-5 h-5" />
+                        New Admission
+                    </button>
+                )}
             </div>
 
             {/* ── Stats Bar ── */}
             <div className="flex flex-col sm:flex-row gap-3 mb-6">
-                <StatCard icon={Users}   label="Total Students" value={students.length} color={P.primary}   />
-                <StatCard icon={UserCheck} label="Active"       value={activeCount}     color="#16a34a"      />
-                <StatCard icon={UserX}   label="Inactive"       value={inactiveCount}   color="#dc2626"      />
+                <StatCard icon={Users} label="Total Students" value={students.length} color={P.primary} />
+                <StatCard icon={UserCheck} label="Active" value={activeCount} color="#16a34a" />
+                <StatCard icon={UserX} label="Inactive" value={inactiveCount} color="#dc2626" />
             </div>
 
             {/* ── Search Bar ── */}
@@ -417,7 +514,7 @@ const Students = () => {
                             ) : filteredStudents.length === 0 ? (
                                 <tr>
                                     <td colSpan="5">
-                                        <EmptyState query={search} onAdd={handleAdd} />
+                                        <EmptyState query={search} onAdd={handleAdd} isAdmin={isAdmin} />
                                     </td>
                                 </tr>
                             ) : (
@@ -453,20 +550,24 @@ const Students = () => {
                                                 >
                                                     <Eye className="w-4 h-4" />
                                                 </button>
-                                                <button
-                                                    onClick={() => handleEdit(student)}
-                                                    title="Edit"
-                                                    className="p-2 rounded-lg transition-all text-gray-400 hover:text-[#3D52A0] hover:bg-[#EDE8F5]"
-                                                >
-                                                    <Edit2 className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(student.id)}
-                                                    title="Delete"
-                                                    className="p-2 rounded-lg transition-all text-gray-400 hover:text-red-500 hover:bg-red-50"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
+                                                {isAdmin && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleEdit(student)}
+                                                            title="Edit"
+                                                            className="p-2 rounded-lg transition-all text-gray-400 hover:text-[#3D52A0] hover:bg-[#EDE8F5]"
+                                                        >
+                                                            <Edit2 className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(student.id)}
+                                                            title="Delete"
+                                                            className="p-2 rounded-lg transition-all text-gray-400 hover:text-red-500 hover:bg-red-50"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -496,6 +597,7 @@ const Students = () => {
                                 onView={handleView}
                                 onEdit={handleEdit}
                                 onDelete={handleDelete}
+                                isAdmin={isAdmin}
                             />
                         ))}
                     </div>

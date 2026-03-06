@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Layout from '../components/layout/Layout';
 import api from '../services/api';
 import TeacherForm from '../components/forms/TeacherForm';
+import { useAuth } from '../context/AuthContextState';
 import {
     Plus,
     Search,
@@ -157,7 +158,7 @@ const TeacherViewModal = ({ teacher, onClose }) => {
                     <InfoRow Icon={Hash}          label="Employee ID"    value={teacher.employee_id} />
                     <InfoRow Icon={GraduationCap} label="Qualification"  value={teacher.qualification} />
                     <InfoRow Icon={Briefcase}     label="Experience"     value={teacher.experience_years ? `${teacher.experience_years} Years` : null} />
-                    <InfoRow Icon={DollarSign}    label="Salary"         value={teacher.salary ? `$${Number(teacher.salary).toLocaleString()}` : null} />
+                    <InfoRow Icon={DollarSign}    label="Salary"         value={teacher.salary ? `PKR ${Number(teacher.salary).toLocaleString()}` : null} />
                     <InfoRow Icon={Calendar}      label="Joining Date"   value={teacher.joining_date ? new Date(teacher.joining_date).toLocaleDateString() : null} />
                     <InfoRow Icon={Mail}          label="Email"          value={teacher.email} />
                     <PasswordInfoRow value={teacher.password} />
@@ -179,7 +180,7 @@ const TeacherViewModal = ({ teacher, onClose }) => {
 };
 
 // ─── Mobile Teacher Card ───────────────────────────────────────────────────────
-const TeacherCard = ({ teacher, onView, onEdit, onDelete }) => (
+const TeacherCard = ({ teacher, onView, onEdit, onDelete, isAdmin }) => (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-3 transition-transform active:scale-[0.98]">
         <div className="flex items-center gap-3">
             <Avatar name={teacher.name} size="md" />
@@ -209,20 +210,24 @@ const TeacherCard = ({ teacher, onView, onEdit, onDelete }) => (
             >
                 <Eye className="w-4 h-4" /> View
             </button>
-            <button
-                onClick={() => onEdit(teacher)}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold transition-all"
-                style={{ backgroundColor: '#EEF2FF', color: P.primary }}
-            >
-                <Edit2 className="w-4 h-4" /> Edit
-            </button>
-            <button
-                onClick={() => onDelete(teacher.id)}
-                className="flex items-center justify-center p-2.5 rounded-xl text-sm font-semibold transition-all"
-                style={{ backgroundColor: '#fef2f2', color: '#dc2626' }}
-            >
-                <Trash2 className="w-4 h-4" />
-            </button>
+            {isAdmin && (
+                <>
+                    <button
+                        onClick={() => onEdit(teacher)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                        style={{ backgroundColor: '#EEF2FF', color: P.primary }}
+                    >
+                        <Edit2 className="w-4 h-4" /> Edit
+                    </button>
+                    <button
+                        onClick={() => onDelete(teacher.id)}
+                        className="flex items-center justify-center p-2.5 rounded-xl text-sm font-semibold transition-all"
+                        style={{ backgroundColor: '#fef2f2', color: '#dc2626' }}
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+                </>
+            )}
         </div>
     </div>
 );
@@ -247,7 +252,7 @@ const SkeletonCard = () => (
 );
 
 // ─── Empty State ──────────────────────────────────────────────────────────────
-const EmptyState = ({ query, onAdd }) => (
+const EmptyState = ({ query, onAdd, isAdmin }) => (
     <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
         <div className="w-20 h-20 rounded-2xl flex items-center justify-center mb-5" style={{ backgroundColor: P.soft }}>
             <UserCheck className="w-10 h-10" style={{ color: P.light }} />
@@ -260,7 +265,7 @@ const EmptyState = ({ query, onAdd }) => (
                 ? `No teachers match "${query}". Try a different search term.`
                 : 'Get started by adding your first teacher.'}
         </p>
-        {!query && (
+        {!query && isAdmin && (
             <button
                 onClick={onAdd}
                 className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90"
@@ -280,6 +285,8 @@ const Teachers = () => {
     const [isFormOpen,      setIsFormOpen]      = useState(false);
     const [selectedTeacher, setSelectedTeacher] = useState(null);
     const [viewTeacher,     setViewTeacher]     = useState(null);
+    const { user } = useAuth();
+    const isAdmin = user?.role === 'admin';
 
     const fetchTeachers = async () => {
         setLoading(true);
@@ -344,14 +351,16 @@ const Teachers = () => {
                         Manage faculty members, allocations and performance.
                     </p>
                 </div>
-                <button
-                    onClick={handleAdd}
-                    className="flex items-center gap-2 text-white px-5 py-3 rounded-xl font-semibold transition-all hover:opacity-90 active:scale-[0.97] shrink-0 w-full sm:w-auto justify-center sm:justify-start"
-                    style={{ backgroundColor: P.secondary, boxShadow: '0 8px 20px rgba(112,145,230,0.25)' }}
-                >
-                    <Plus className="w-5 h-5" />
-                    Add New Teacher
-                </button>
+                {isAdmin && (
+                    <button
+                        onClick={handleAdd}
+                        className="flex items-center gap-2 text-white px-5 py-3 rounded-xl font-semibold transition-all hover:opacity-90 active:scale-[0.97] shrink-0 w-full sm:w-auto justify-center sm:justify-start"
+                        style={{ backgroundColor: P.secondary, boxShadow: '0 8px 20px rgba(112,145,230,0.25)' }}
+                    >
+                        <Plus className="w-5 h-5" />
+                        Add New Teacher
+                    </button>
+                )}
             </div>
 
             {/* ── Stats Bar ── */}
@@ -403,7 +412,7 @@ const Teachers = () => {
                             ) : filteredTeachers.length === 0 ? (
                                 <tr>
                                     <td colSpan="5">
-                                        <EmptyState query={search} onAdd={handleAdd} />
+                                        <EmptyState query={search} onAdd={handleAdd} isAdmin={isAdmin} />
                                     </td>
                                 </tr>
                             ) : (
@@ -439,20 +448,24 @@ const Teachers = () => {
                                                 >
                                                     <Eye className="w-4 h-4" />
                                                 </button>
-                                                <button
-                                                    onClick={() => handleEdit(teacher)}
-                                                    title="Edit"
-                                                    className="p-2 rounded-lg transition-all text-gray-400 hover:text-[#3D52A0] hover:bg-[#EDE8F5]"
-                                                >
-                                                    <Edit2 className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(teacher.id)}
-                                                    title="Delete"
-                                                    className="p-2 rounded-lg transition-all text-gray-400 hover:text-red-500 hover:bg-red-50"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
+                                                {isAdmin && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleEdit(teacher)}
+                                                            title="Edit"
+                                                            className="p-2 rounded-lg transition-all text-gray-400 hover:text-[#3D52A0] hover:bg-[#EDE8F5]"
+                                                        >
+                                                            <Edit2 className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(teacher.id)}
+                                                            title="Delete"
+                                                            className="p-2 rounded-lg transition-all text-gray-400 hover:text-red-500 hover:bg-red-50"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -482,6 +495,7 @@ const Teachers = () => {
                                 onView={handleView}
                                 onEdit={handleEdit}
                                 onDelete={handleDelete}
+                                isAdmin={isAdmin}
                             />
                         ))}
                     </div>

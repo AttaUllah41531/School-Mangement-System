@@ -23,7 +23,7 @@ exports.getAllStudents = async (req, res) => {
 exports.getStudentById = async (req, res) => {
     try {
         const query = `
-            SELECT s.*, u.name, u.email, c.name as class_name, sec.name as section_name, p.user_id as parent_user_id
+            SELECT s.*, u.name, u.email, u.status, c.name as class_name, sec.name as section_name, p.user_id as parent_user_id
             FROM students s
             JOIN users u ON s.user_id = u.id
             LEFT JOIN classes c ON s.class_id = c.id
@@ -53,12 +53,51 @@ exports.createStudent = async (req, res) => {
             email,
             password,
             admission_no,
+            phone,
+            parent_name,
+            parent_phone,
+            occupation,
             class_id,
             section_id,
             dob,
             gender,
             address
         } = req.body;
+
+        // Validation
+        if (!name || !email || !admission_no) {
+            await connection.rollback();
+            return res.status(400).json({
+                success: false,
+                message: 'Name, email, and admission number are required'
+            });
+        }
+
+        // Check if admission_no already exists
+        const [existingStudent] = await connection.execute(
+            'SELECT id FROM students WHERE admission_no = ?',
+            [admission_no]
+        );
+        if (existingStudent.length > 0) {
+            await connection.rollback();
+            return res.status(400).json({
+                success: false,
+                message: 'Admission number already exists'
+            });
+        }
+
+        // Check if email already exists
+        const [existingUser] = await connection.execute(
+            'SELECT id FROM users WHERE email = ?',
+            [email]
+        );
+        if (existingUser.length > 0) {
+            await connection.rollback();
+            return res.status(400).json({
+                success: false,
+                message: 'Email already exists'
+            });
+        }
 
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password || 'student123', salt);
@@ -71,19 +110,35 @@ exports.createStudent = async (req, res) => {
         const userId = userResult.insertId;
 
         // 2. Create Student
-        await connection.execute(
-            'INSERT INTO students (user_id, admission_no, class_id, section_id, dob, gender, address, admission_date) VALUES (?, ?, ?, ?, ?, ?, ?, CURDATE())',
-            [userId, admission_no, class_id, section_id, dob, gender, address]
+        const [studentResult] = await connection.execute(
+            'INSERT INTO students (user_id, admission_no, phone, parent_name, parent_phone, occupation, class_id, section_id, dob, gender, address, admission_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())',
+            [userId, admission_no, phone || null, parent_name || null, parent_phone || null, occupation || null, class_id || null, section_id || null, dob || null, gender || 'male', address || null]
         );
+        const studentId = studentResult.insertId;
 
         await connection.commit();
+
+        // Fetch the created student with all details
+        const [newStudent] = await connection.execute(`
+            SELECT s.*, u.name, u.email, c.name as class_name, sec.name as section_name 
+            FROM students s
+            JOIN users u ON s.user_id = u.id
+            LEFT JOIN classes c ON s.class_id = c.id
+            LEFT JOIN sections sec ON s.section_id = sec.id
+            WHERE s.id = ?
+        `, [studentId]);
+
         res.status(201).json({
-            message: 'Student created successfully'
+            success: true,
+            message: 'Student created successfully',
+            data: newStudent[0]
         });
     } catch (error) {
         await connection.rollback();
+        console.error('Create student error:', error);
         res.status(500).json({
-            message: 'Error creating student',
+            success: false,
+            message: `Error creating student: ${error.message}`,
             error: error.message
         });
     } finally {
@@ -99,6 +154,10 @@ exports.updateStudent = async (req, res) => {
             name,
             email,
             admission_no,
+            phone,
+            parent_name,
+            parent_phone,
+            occupation,
             class_id,
             section_id,
             dob,
@@ -118,15 +177,27 @@ exports.updateStudent = async (req, res) => {
         const userId = students[0].user_id;
 
         // 1. Update User
+        const userUpdates = ['name = ?', 'email = ?', 'status = ?'];
+        const userParams = [name, email, status || 'active'];
+
+        if (req.body.password && req.body.password.trim() !== '') {
+            const bcrypt = require('bcryptjs');
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(req.body.password, salt);
+            userUpdates.push('password = ?');
+            userParams.push(hashedPassword);
+        }
+
+        userParams.push(userId);
         await connection.execute(
-            'UPDATE users SET name = ?, email = ?, status = ? WHERE id = ?',
-            [name, email, status || 'active', userId]
+            `UPDATE users SET ${userUpdates.join(', ')} WHERE id = ?`,
+            userParams
         );
 
         // 2. Update Student
         await connection.execute(
-            'UPDATE students SET admission_no = ?, class_id = ?, section_id = ?, dob = ?, gender = ?, address = ? WHERE id = ?',
-            [admission_no, class_id, section_id, dob, gender, address, studentId]
+            'UPDATE students SET admission_no = ?, phone = ?, parent_name = ?, parent_phone = ?, occupation = ?, class_id = ?, section_id = ?, dob = ?, gender = ?, address = ? WHERE id = ?',
+            [admission_no, phone, parent_name, parent_phone, occupation, class_id, section_id, dob, gender, address, studentId]
         );
 
         await connection.commit();

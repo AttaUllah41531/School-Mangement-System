@@ -10,6 +10,8 @@ import Academic from './pages/Academic';
 import Attendance from './pages/Attendance';
 import Exams from './pages/Exams';
 import Library from './pages/Library';
+import Fees from './pages/Fees';
+import PaymentStatus from './pages/PaymentStatus';
 import Settings from './pages/Settings';
 
 const PrivateRoute = ({ children }) => {
@@ -78,6 +80,22 @@ function App() {
                             element={
                                 <PrivateRoute>
                                     <Library />
+                                </PrivateRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/fees" 
+                            element={
+                                <PrivateRoute>
+                                    <Fees />
+                                </PrivateRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/payment-status" 
+                            element={
+                                <PrivateRoute>
+                                    <PaymentStatus />
                                 </PrivateRoute>
                             } 
                         />

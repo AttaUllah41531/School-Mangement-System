@@ -54,6 +54,38 @@ exports.createTeacher = async (req, res) => {
             joining_date
         } = req.body;
 
+        // Validation
+        if (!name || !email || !employee_id) {
+            await connection.rollback();
+            return res.status(400).json({
+                message: 'Name, email, and employee ID are required'
+            });
+        }
+
+        // Check if employee_id already exists
+        const [existingTeacher] = await connection.execute(
+            'SELECT id FROM teachers WHERE employee_id = ?',
+            [employee_id]
+        );
+        if (existingTeacher.length > 0) {
+            await connection.rollback();
+            return res.status(400).json({
+                message: 'Employee ID already exists'
+            });
+        }
+
+        // Check if email already exists
+        const [existingUser] = await connection.execute(
+            'SELECT id FROM users WHERE email = ?',
+            [email]
+        );
+        if (existingUser.length > 0) {
+            await connection.rollback();
+            return res.status(400).json({
+                message: 'Email already exists'
+            });
+        }
+
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password || 'teacher123', salt);
 
@@ -65,7 +97,14 @@ exports.createTeacher = async (req, res) => {
 
         await connection.execute(
             'INSERT INTO teachers (user_id, employee_id, qualification, experience_years, salary, joining_date) VALUES (?, ?, ?, ?, ?, ?)',
-            [userId, employee_id, qualification, experience_years, salary, joining_date]
+            [
+                userId,
+                employee_id,
+                qualification || null,
+                experience_years || null,
+                salary || null,
+                joining_date || null
+            ]
         );
 
         await connection.commit();
@@ -74,6 +113,7 @@ exports.createTeacher = async (req, res) => {
         });
     } catch (error) {
         await connection.rollback();
+        console.error('Create Teacher Error:', error);
         res.status(500).json({
             message: 'Error creating teacher',
             error: error.message
@@ -99,13 +139,39 @@ exports.updateTeacher = async (req, res) => {
         } = req.body;
         const teacherId = req.params.id;
 
+        // Find teacher and user_id
         const [teachers] = await connection.execute('SELECT user_id FROM teachers WHERE id = ?', [teacherId]);
         if (teachers.length === 0) {
+            await connection.rollback();
             return res.status(404).json({
                 message: 'Teacher not found'
             });
         }
         const userId = teachers[0].user_id;
+
+        // Check if employee_id is taken by another teacher
+        const [existingTeacher] = await connection.execute(
+            'SELECT id FROM teachers WHERE employee_id = ? AND id != ?',
+            [employee_id, teacherId]
+        );
+        if (existingTeacher.length > 0) {
+            await connection.rollback();
+            return res.status(400).json({
+                message: 'Employee ID already exists'
+            });
+        }
+
+        // Check if email is taken by another user
+        const [existingUser] = await connection.execute(
+            'SELECT id FROM users WHERE email = ? AND id != ?',
+            [email, userId]
+        );
+        if (existingUser.length > 0) {
+            await connection.rollback();
+            return res.status(400).json({
+                message: 'Email already exists'
+            });
+        }
 
         await connection.execute(
             'UPDATE users SET name = ?, email = ?, status = ? WHERE id = ?',
@@ -114,7 +180,14 @@ exports.updateTeacher = async (req, res) => {
 
         await connection.execute(
             'UPDATE teachers SET employee_id = ?, qualification = ?, experience_years = ?, salary = ?, joining_date = ? WHERE id = ?',
-            [employee_id, qualification, experience_years, salary, joining_date, teacherId]
+            [
+                employee_id,
+                qualification || null,
+                experience_years || null,
+                salary || null,
+                joining_date || null,
+                teacherId
+            ]
         );
 
         await connection.commit();
@@ -123,6 +196,7 @@ exports.updateTeacher = async (req, res) => {
         });
     } catch (error) {
         await connection.rollback();
+        console.error('Update Teacher Error:', error);
         res.status(500).json({
             message: 'Error updating teacher',
             error: error.message

@@ -76,14 +76,25 @@ exports.login = async (req, res) => {
             }
         );
 
+        const userData = {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role
+        };
+
+        // Add specific IDs based on role
+        if (user.role === 'student') {
+            const [students] = await db.execute('SELECT id FROM students WHERE user_id = ?', [user.id]);
+            if (students.length > 0) userData.student_id = students[0].id;
+        } else if (user.role === 'teacher') {
+            const [teachers] = await db.execute('SELECT id FROM teachers WHERE user_id = ?', [user.id]);
+            if (teachers.length > 0) userData.teacher_id = teachers[0].id;
+        }
+
         res.json({
             token,
-            user: {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                role: user.role
-            }
+            user: userData
         });
     } catch (error) {
         res.status(500).json({
@@ -95,13 +106,31 @@ exports.login = async (req, res) => {
 
 exports.getMe = async (req, res) => {
     try {
-        const [users] = await db.execute('SELECT id, name, email, role FROM users WHERE id = ?', [req.user.id]);
+        const userId = req.user.id;
+        const role = req.user.role;
+
+        const [users] = await db.execute('SELECT id, name, email, role FROM users WHERE id = ?', [userId]);
         if (users.length === 0) {
             return res.status(404).json({
                 message: 'User not found'
             });
         }
-        res.json(users[0]);
+
+        const user = users[0];
+
+        if (role === 'student') {
+            const [students] = await db.execute('SELECT id FROM students WHERE user_id = ?', [userId]);
+            if (students.length > 0) {
+                user.student_id = students[0].id;
+            }
+        } else if (role === 'teacher') {
+            const [teachers] = await db.execute('SELECT id FROM teachers WHERE user_id = ?', [userId]);
+            if (teachers.length > 0) {
+                user.teacher_id = teachers[0].id;
+            }
+        }
+
+        res.json(user);
     } catch (error) {
         res.status(500).json({
             message: 'Fetch user failed',

@@ -15,8 +15,10 @@ const TeacherForm = ({ isOpen, onClose, teacher, onSubmit }) => {
     });
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
+        setError(null);
         if (teacher) {
             setFormData({
                 ...teacher,
@@ -41,11 +43,13 @@ const TeacherForm = ({ isOpen, onClose, teacher, onSubmit }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
+        setError(null);
         try {
             await onSubmit(formData);
             onClose();
         } catch (err) {
             console.error('Submit error:', err);
+            setError(err.response?.data?.message || err.message || 'Something went wrong');
         } finally {
             setLoading(false);
         }
@@ -64,6 +68,11 @@ const TeacherForm = ({ isOpen, onClose, teacher, onSubmit }) => {
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-8 space-y-6">
+                    {error && (
+                        <div className="p-4 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm font-medium">
+                            {error}
+                        </div>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label className="block text-sm font-semibold mb-2" style={{ color: '#3D52A0' }}>Full Name</label>
